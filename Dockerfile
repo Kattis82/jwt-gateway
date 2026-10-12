@@ -1,4 +1,9 @@
-FROM ubuntu:latest
-LABEL authors="katti"
+FROM eclipse-temurin:17-jre
 
-ENTRYPOINT ["top", "-b"]
+WORKDIR /app
+
+COPY target/jwt-gateway-0.0.1-SNAPSHOT.jar app.jar
+
+EXPOSE 9003
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
