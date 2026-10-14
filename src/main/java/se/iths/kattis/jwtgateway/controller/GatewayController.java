@@ -1,8 +1,8 @@
 package se.iths.kattis.jwtgateway.controller;
 
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,24 +21,16 @@ public class GatewayController {
     }
 
     // tar emot inloggningsuppgifter från frontend och skickar dem till Auth Server
-    @PostMapping(
-            value = "/auth/login",
-            consumes = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<String> login(
+    @PostMapping("/auth/login")
+    public ResponseEntity<?> login(
             @RequestBody String requestBody,
             HttpServletRequest request) {
 
-        // hämtar eventuell Authorization-header från det inkommande anropet
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
-
         // skickar inloggningsuppgifterna vidare till Auth Server
-        return proxyService.forwardPost(
-                "/auth/login",
+        // Gatewayen hanterar JWT-token och returnerar den som en HttpOnly-cookie
+        return proxyService.loginWithCookie(
                 requestBody,
-                authorization,
-                request.getContentType()
+                request.getHeader(HttpHeaders.CONTENT_TYPE)
         );
     }
 
@@ -65,48 +57,71 @@ public class GatewayController {
     }
 
 
-    // tar emot frontends begäran om att hämta alla produkter
-    @GetMapping("/products")
-    public ResponseEntity<String> getProducts(
-            HttpServletRequest request) {
-
-        // hämtar eventuell JWT-token från anropet
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
-
-        // skickar anropet vidare till Product Service
-        return proxyService.getProducts(authorization);
+    @PostMapping("/auth/logout")
+    public ResponseEntity<Void> logout() {
+        return proxyService.logout();
     }
 
-    // tar emot en begäran om att hämta en viss produkt
-    @SecurityRequirement(name = "bearerAuth")
+
+    // hämtar alla produkter från Product Service
+    // Metoden är publik och kräver därför ingen inloggning eller cookie
+    @GetMapping("/products")
+    public ResponseEntity<String> getProducts() {
+
+        // skickar anropet vidare till Product Service utan JWT-token
+        return proxyService.getProducts(null);
+    }
+
+
+    // hämtar en specifik produkt med hjälp av dess ID
     @GetMapping("/products/{id}")
     public ResponseEntity<String> getProductById(
             @PathVariable String id,
-            HttpServletRequest request) {
 
-        // hämtar eventuell JWT-token från anropet
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+            // hämtar JWT-token från webbläsarens HttpOnly-cookie
+            // required = false gör att vi själva kan hantera saknad cookie
+            @CookieValue(name = "access_token", required = false)
+            String accessToken) {
 
-        // skickar vidare produktens ID och eventuell JWT-token
+
+        // kontrollerar att användaren har en JWT-token i cookien.
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // avbryter anropet om cookien saknas.
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // gör om cookiens token till en Bearer-token
+        String authorization = getAuthorizationFromCookie(accessToken);
+
+
+        // skickar vidare produktens ID och token till Product Service
         return proxyService.getProductById(id, authorization);
     }
 
 
-    // tar emot en ny produkt från frontend och skickar den till Product Service
-    @SecurityRequirement(name = "bearerAuth")
-    @PostMapping(
-            value = "/products",
-            consumes = MediaType.APPLICATION_JSON_VALUE
-    )
+    // skapar en ny produkt
+    // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
+    @PostMapping(value = "/products",
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> createProduct(
             @RequestBody String requestBody,
-            HttpServletRequest request) {
+            @CookieValue(name = "access_token", required = false)
+            String accessToken, HttpServletRequest request) {
 
-        // hämtar adminanvändarens JWT-token
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+        // kontrollerar att användaren har en JWT-token i cookien
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // avbryter anropet om cookien saknas
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // gör om token från cookien till en Bearer-token
+        String authorization = getAuthorizationFromCookie(accessToken);
 
         // skickar produktdata och token vidare till Product Service
         return proxyService.createProduct(
@@ -116,35 +131,52 @@ public class GatewayController {
         );
     }
 
-    // tar emot en begäran om att ta bort en produkt
-    @SecurityRequirement(name = "bearerAuth")
+    // tar bort en produkt med hjälp av dess ID
+    // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
     @DeleteMapping("/products/{id}")
     public ResponseEntity<String> deleteProduct(
             @PathVariable String id,
-            HttpServletRequest request) {
+            @CookieValue(name = "access_token", required = false)
+            String accessToken) {
 
-        // hämtar adminanvändarens JWT-token
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+        // kontrollerar att användaren har en JWT-token i cookien
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // avbryter anropet om cookien saknas
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // Gör om token från cookien till en Bearer-token.
+        String authorization = getAuthorizationFromCookie(accessToken);
 
         // skickar vidare produktens ID och token
         return proxyService.deleteProduct(id, authorization);
     }
 
 
-    // tar emot en ny order från frontend
-    @SecurityRequirement(name = "bearerAuth")
-    @PostMapping(
-            value = "/orders",
-            consumes = MediaType.APPLICATION_JSON_VALUE
-    )
+    // skapar en order
+    // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
+    @PostMapping(value = "/orders",
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> createOrder(
             @RequestBody String requestBody,
+            @CookieValue(name = "access_token", required = false)
+            String accessToken,
             HttpServletRequest request) {
 
-        // hämtar JWT-token som Order Service behöver för att identifiera kunden
-        String authorization =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+        // kontrollerar att användaren har en JWT-token i cookien
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // avbryter anropet om cookien saknas
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // Gör om token från cookien till en Bearer-token.
+        String authorization = getAuthorizationFromCookie(accessToken);
 
         // skickar orderns JSON-data och headers vidare till Order Service
         return proxyService.createOrder(
@@ -152,6 +184,31 @@ public class GatewayController {
                 authorization,
                 request.getContentType()
         );
+    }
+
+    // hjälpmetoder
+
+    // hämtar JWT-token från cookien och gör om den till en Bearer-token
+    // om cookien saknas returneras null så att vi inte skickar "Bearer null"
+    private String getAuthorizationFromCookie(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            return null;
+        }
+
+        return "Bearer " + accessToken;
+    }
+
+
+    // kontrollerar om användaren saknar en JWT-token
+    // om cookien saknas returneras 401 Unauthorized
+    private ResponseEntity<String> unauthorizedIfMissing(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Du måste logga in för att komma åt resursen.");
+        }
+
+        // ingen felrespons behövs när cookien finns
+        return null;
     }
 
 }
