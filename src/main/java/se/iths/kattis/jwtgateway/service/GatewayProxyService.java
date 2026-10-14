@@ -47,10 +47,10 @@ public class GatewayProxyService {
             HttpClient httpClient,
             // hämtar inställningen för om cookien endast får skickas över HTTPS
             // false används som standard vid lokal utveckling
-            @Value("${COOKIE_SECURE:false}") boolean cookieSecure,
+            @Value("${app.cookie.secure:false}") boolean cookieSecure,
             // hämtar SameSite-inställningen för cookien
             // Lax används som standard vid lokal utveckling
-            @Value("${COOKIE_SAME_SITE:Lax}") String cookieSameSite) {
+            @Value("${app.cookie.same-site:Lax}") String cookieSameSite) {
         this.authServerUrl = authServerUrl;
         this.productServiceUrl = productServiceUrl;
         this.orderServiceUrl = orderServiceUrl;
@@ -58,6 +58,7 @@ public class GatewayProxyService {
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
     }
+
 
 
     // bygger ett GET-anrop för att hämta information från en mikrotjänst
