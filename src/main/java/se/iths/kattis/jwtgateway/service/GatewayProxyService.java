@@ -78,6 +78,18 @@ public class GatewayProxyService {
         return send(builder, authorization);
     }
 
+    // hämtar den inloggade användarens information från Auth Server
+    // authorization innehåller JWT-tokenen från gatewayens cookie,
+    // omgjord till formatet: Bearer <token>
+    public ResponseEntity<String> getCurrentUser(String authorization) {
+
+        // skapar ett GET-anrop till Auth Servers /auth/me
+        // Auth Server validerar token innan användarinformationen returneras
+        return forwardGet(authServerUrl, "/auth/me", authorization);
+
+    }
+
+
     // bygger ett POST-anrop för att skicka data till en mikrotjänst
     // path = endpoint som ska anropas t ex "/auth/login"
     // requestBody = innehåller t ex JSON med inloggningsuppgifter
@@ -164,7 +176,7 @@ public class GatewayProxyService {
             String requestBody,
             String authorization,
             String contentType) {
-        
+
 
         // använder Order Services adress och dess orders-endpoint
         HttpRequest.Builder builder =
