@@ -63,6 +63,31 @@ public class GatewayController {
     }
 
 
+    // frontend anropar denna endpoint när appen startar om eller laddas om
+    @GetMapping("/auth/me")
+    public ResponseEntity<String> getCurrentUser(
+            // läser JWT-token från gatewayens HttpOnly-cookie
+            // required = false gör att vi själva kan hantera saknad cookie
+            @CookieValue(name = "access_token", required = false)
+            String accessToken) {
+
+        // kontrollerar att cookien innehåller en token
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // om cookien saknas skickas 401 Unauthorized till frontend
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // gör om token till formatet som Auth Server förväntar sig
+        String authorization = getAuthorizationFromCookie(accessToken);
+
+        // skickar token vidare till Auth Server och returnerar svaret
+        return proxyService.getCurrentUser(authorization);
+    }
+
+
     // hämtar alla produkter från Product Service
     // Metoden är publik och kräver därför ingen inloggning eller cookie
     @GetMapping("/products")
