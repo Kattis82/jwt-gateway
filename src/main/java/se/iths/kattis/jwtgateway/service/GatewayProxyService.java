@@ -60,7 +60,6 @@ public class GatewayProxyService {
     }
 
 
-
     // bygger ett GET-anrop för att hämta information från en mikrotjänst
     // baseUrl är tjänstens adress och path är sökvägen till resursen
     // ex: http://localhost:8082 + /products
@@ -190,6 +189,37 @@ public class GatewayProxyService {
         }
 
         // skickar ordern vidare och returnerar svaret från Order Service
+        return send(builder, authorization);
+    }
+
+
+    // hämtar den inloggade kundens ordrar från Order Service
+    public ResponseEntity<String> getCustomerOrders(String authorization) {
+
+        // anropar Order Services GET-endpoint för kundens ordrar
+        return forwardGet(orderServiceUrl, "/orders", authorization);
+    }
+
+
+    // skickar Checkout-anropet till Order Service
+    // Order Service skapar både ordern och Stripe Checkout-sessionen
+    public ResponseEntity<String> createCheckoutOrder(
+            String requestBody,
+            String authorization,
+            String contentType) {
+
+        // skapar ett POST-anrop till Order Services checkout-endpoint
+        HttpRequest.Builder builder =
+                HttpRequest.newBuilder(
+                                URI.create(orderServiceUrl + "/orders/checkout"))
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody));
+
+        // anger vilken typ av data som skickas, t ex JSON
+        if (contentType != null && !contentType.isBlank()) {
+            builder.header(HttpHeaders.CONTENT_TYPE, contentType);
+        }
+
+        // skickar med JWT-token och returnerar Order Services svar
         return send(builder, authorization);
     }
 
