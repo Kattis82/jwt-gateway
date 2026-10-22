@@ -10,6 +10,7 @@ import se.iths.kattis.jwtgateway.dto.AuthServerResponse;
 import se.iths.kattis.jwtgateway.dto.LoginResponse;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.net.URI;
@@ -214,10 +215,9 @@ public class GatewayProxyService {
                                 URI.create(orderServiceUrl + "/orders/checkout"))
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody));
 
-        // anger vilken typ av data som skickas, t ex JSON
-        if (contentType != null && !contentType.isBlank()) {
-            builder.header(HttpHeaders.CONTENT_TYPE, contentType);
-        }
+       
+        builder.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+
 
         // skickar med JWT-token och returnerar Order Services svar
         return send(builder, authorization);
