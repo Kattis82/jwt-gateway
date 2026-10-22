@@ -10,6 +10,7 @@ import se.iths.kattis.jwtgateway.dto.AuthServerResponse;
 import se.iths.kattis.jwtgateway.dto.LoginResponse;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.net.URI;
@@ -58,7 +59,6 @@ public class GatewayProxyService {
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
     }
-
 
 
     // bygger ett GET-anrop för att hämta information från en mikrotjänst
@@ -190,6 +190,36 @@ public class GatewayProxyService {
         }
 
         // skickar ordern vidare och returnerar svaret från Order Service
+        return send(builder, authorization);
+    }
+
+
+    // hämtar den inloggade kundens ordrar från Order Service
+    public ResponseEntity<String> getCustomerOrders(String authorization) {
+
+        // anropar Order Services GET-endpoint för kundens ordrar
+        return forwardGet(orderServiceUrl, "/orders", authorization);
+    }
+
+
+    // skickar Checkout-anropet till Order Service
+    // Order Service skapar både ordern och Stripe Checkout-sessionen
+    public ResponseEntity<String> createCheckoutOrder(
+            String requestBody,
+            String authorization,
+            String contentType) {
+
+        // skapar ett POST-anrop till Order Services checkout-endpoint
+        HttpRequest.Builder builder =
+                HttpRequest.newBuilder(
+                                URI.create(orderServiceUrl + "/orders/checkout"))
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody));
+
+       
+        builder.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+
+
+        // skickar med JWT-token och returnerar Order Services svar
         return send(builder, authorization);
     }
 

@@ -211,6 +211,60 @@ public class GatewayController {
         );
     }
 
+
+    // hämtar den inloggade kundens orderhistorik
+    @GetMapping("/orders")
+    public ResponseEntity<String> getCustomerOrders(
+            @CookieValue(name = "access_token", required = false)
+            String accessToken) {
+
+        // kontrollerar att användaren har en JWT-cookie
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(accessToken);
+
+        // returnerar 401 om användaren inte är inloggad
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // gör om token från cookien till en Bearer-token
+        String authorization = getAuthorizationFromCookie(accessToken);
+
+        // hämtar kundens ordrar från Order Service
+        return proxyService.getCustomerOrders(authorization);
+    }
+
+
+    // skapar en order och startar Stripe Checkout via Order Service
+    @PostMapping("/orders/checkout")
+    public ResponseEntity<String> createCheckoutOrder(
+            @RequestBody String requestBody,
+            @RequestHeader(
+                    value = HttpHeaders.CONTENT_TYPE,
+                    required = false) String contentType,
+            @CookieValue(
+                    name = "access_token",
+                    required = false) String token) {
+
+        // kontrollera att användaren har en JWT-cookie
+        ResponseEntity<String> unauthorized =
+                unauthorizedIfMissing(token);
+
+        if (unauthorized != null) {
+            return unauthorized;
+        }
+
+        // gör om cookiens token till formatet som Order Service förväntar sig
+        String authorization = getAuthorizationFromCookie(token);
+
+        // skickar ordern vidare till Order Service för Checkout
+        return proxyService.createCheckoutOrder(
+                requestBody,
+                authorization,
+                contentType);
+    }
+
+
     // hjälpmetoder
 
     // hämtar JWT-token från cookien och gör om den till en Bearer-token
