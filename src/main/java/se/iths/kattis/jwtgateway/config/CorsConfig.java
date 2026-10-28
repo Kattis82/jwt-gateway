@@ -8,10 +8,20 @@ import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
+/**
+ * Konfigurerar CORS så att frontend får anropa Gateway, inklusive med cookies.
+ */
 @Configuration
 public class CorsConfig {
 
-    // skapar ett CORS-filter som Spring använder för inkommande HTTP-anrop
+
+    /**
+     * Skapar ett CORS-filter som tillåter anrop från lokala frontend-adresser och
+     * den driftsatta webbshoppen, med metoderna GET, POST, PUT, DELETE och OPTIONS.
+     * Credentials är tillåtna så att cookien {@code access_token} skickas med.
+     *
+     * @return CORS-filtret för alla sökvägar
+     */
     @Bean
     public CorsFilter corsFilter() {
 

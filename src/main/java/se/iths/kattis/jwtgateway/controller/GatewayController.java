@@ -8,7 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.iths.kattis.jwtgateway.service.GatewayProxyService;
 
-// definierar gatewayens publika API för frontend
+
+/**
+ * Gatewayens publika API för frontend. Alla endpoints nås via {@code /gateway}.
+ * JWT läses från HttpOnly-cookien {@code access_token} och skickas vidare till
+ * mikrotjänsterna som {@code Authorization: Bearer <token>}.
+ * Skyddade endpoints svarar 401 om cookien saknas. Gateway kontrollerar bara att
+ * cookien finns, tjänsten som tar emot anropet validerar token.
+ */
 @RestController
 @RequestMapping("/gateway")
 public class GatewayController {
@@ -20,7 +27,14 @@ public class GatewayController {
         this.proxyService = proxyService;
     }
 
-    // tar emot inloggningsuppgifter från frontend och skickar dem till Auth Server
+
+    /**
+     * Loggar in via Auth Server. JWT sparas i en HttpOnly-cookie.
+     *
+     * @param requestBody inloggningsuppgifterna som JSON
+     * @param request     det inkommande anropet, används för Content-Type
+     * @return svaret från Auth Server tillsammans med inloggningscookien
+     */
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(
             @RequestBody String requestBody,
@@ -34,7 +48,13 @@ public class GatewayController {
         );
     }
 
-    // tar emot registreringsuppgifter från frontend och skickar dem till Auth Server
+    /**
+     * Registrerar en ny användare via Auth Server. Kräver ingen inloggning.
+     *
+     * @param requestBody registreringsuppgifterna som JSON
+     * @param request     det inkommande anropet
+     * @return svaret från Auth Server
+     */
     @PostMapping(
             value = "/users/register",
             consumes = MediaType.APPLICATION_JSON_VALUE
@@ -56,14 +76,24 @@ public class GatewayController {
         );
     }
 
-
+    /**
+     * Loggar ut genom att ta bort inloggningscookien.
+     *
+     * @return tomt svar
+     */
     @PostMapping("/auth/logout")
     public ResponseEntity<Void> logout() {
         return proxyService.logout();
     }
 
 
-    // frontend anropar denna endpoint när appen startar om eller laddas om
+    /**
+     * Returnerar den inloggade användaren. Frontend anropar den när appen laddas om
+     * för att återställa inloggningen.
+     *
+     * @param accessToken JWT från cookien, kan vara null
+     * @return användarnamn och roller från Auth Server, eller 401 om cookien saknas
+     */
     @GetMapping("/auth/me")
     public ResponseEntity<String> getCurrentUser(
             // läser JWT-token från gatewayens HttpOnly-cookie
@@ -88,8 +118,11 @@ public class GatewayController {
     }
 
 
-    // hämtar alla produkter från Product Service
-    // Metoden är publik och kräver därför ingen inloggning eller cookie
+    /**
+     * Hämtar alla produkter från Product Service. Kräver ingen inloggning.
+     *
+     * @return produkterna som JSON
+     */
     @GetMapping("/products")
     public ResponseEntity<String> getProducts() {
 
@@ -119,7 +152,14 @@ public class GatewayController {
     }
     
 
-    // skapar en ny produkt
+    /**
+     * Skapar en produkt i Product Service. Kräver inloggning.
+     *
+     * @param requestBody produktuppgifter som JSON
+     * @param accessToken JWT från cookien, kan vara null
+     * @param request     det inkommande anropet, används för Content-Type
+     * @return svaret från Product Service, eller 401 om cookien saknas
+     */
     // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
     @PostMapping(value = "/products",
             consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -148,7 +188,14 @@ public class GatewayController {
         );
     }
 
-    // tar bort en produkt med hjälp av dess ID
+
+    /**
+     * Tar bort en produkt i Product Service. Kräver inloggning.
+     *
+     * @param id          produktens id
+     * @param accessToken JWT från cookien, kan vara null
+     * @return svaret från Product Service, eller 401 om cookien saknas
+     */
     // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
     @DeleteMapping("/products/{id}")
     public ResponseEntity<String> deleteProduct(
@@ -173,7 +220,14 @@ public class GatewayController {
     }
 
 
-    // skapar en order
+    /**
+     * Skapar en order i Order Service utan betalning. Kräver inloggning.
+     *
+     * @param requestBody orderns produkter som JSON
+     * @param accessToken JWT från cookien, kan vara null
+     * @param request     det inkommande anropet, används för Content-Type
+     * @return svaret från Order Service, eller 401 om cookien saknas
+     */
     // JWT-token hämtas från den HttpOnly-cookie som skapades vid inloggning
     @PostMapping(value = "/orders",
             consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -204,7 +258,12 @@ public class GatewayController {
     }
 
 
-    // hämtar den inloggade kundens orderhistorik
+    /**
+     * Hämtar den inloggade kundens orderhistorik från Order Service.
+     *
+     * @param accessToken JWT från cookien, kan vara null
+     * @return kundens ordrar som JSON, eller 401 om cookien saknas
+     */
     @GetMapping("/orders")
     public ResponseEntity<String> getCustomerOrders(
             @CookieValue(name = "access_token", required = false)
@@ -226,8 +285,14 @@ public class GatewayController {
         return proxyService.getCustomerOrders(authorization);
     }
 
-
-    // skapar en order och startar Stripe Checkout via Order Service
+    /**
+     * Skapar en order och startar Stripe Checkout via Order Service. Kräver inloggning.
+     *
+     * @param requestBody orderns produkter som JSON
+     * @param contentType anropets Content-Type, kan vara null
+     * @param token       JWT från cookien, kan vara null
+     * @return order-id, session-id och betalningslänk, eller 401 om cookien saknas
+     */
     @PostMapping("/orders/checkout")
     public ResponseEntity<String> createCheckoutOrder(
             @RequestBody String requestBody,
@@ -259,8 +324,12 @@ public class GatewayController {
 
     // hjälpmetoder
 
-    // hämtar JWT-token från cookien och gör om den till en Bearer-token
-    // om cookien saknas returneras null så att vi inte skickar "Bearer null"
+    /**
+     * Gör om JWT från cookien till en Bearer-token.
+     *
+     * @param accessToken JWT från cookien
+     * @return {@code "Bearer " + token}, eller null om token saknas
+     */
     private String getAuthorizationFromCookie(String accessToken) {
         if (accessToken == null || accessToken.isBlank()) {
             return null;
@@ -270,8 +339,12 @@ public class GatewayController {
     }
 
 
-    // kontrollerar om användaren saknar en JWT-token
-    // om cookien saknas returneras 401 Unauthorized
+    /**
+     * Kontrollerar att en JWT finns.
+     *
+     * @param accessToken JWT från cookien
+     * @return 401 Unauthorized om token saknas, annars null
+     */
     private ResponseEntity<String> unauthorizedIfMissing(String accessToken) {
         if (accessToken == null || accessToken.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
