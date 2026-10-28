@@ -131,38 +131,26 @@ public class GatewayController {
     }
 
     /**
-     * Hämtar en produkt. Kräver inloggning.
+     * Hämtar en produkt. Kräver ingen inloggning. Finns en cookie skickas token med,
+     * annars skickas anropet utan token.
      *
      * @param id          produktens id
      * @param accessToken JWT från cookien, kan vara null
-     * @return produkten som JSON, eller 401 om cookien saknas
+     * @return produkten som JSON
      */
     @GetMapping("/products/{id}")
     public ResponseEntity<String> getProductById(
             @PathVariable String id,
-            // hämtar JWT-token från webbläsarens HttpOnly-cookie
-            // required = false gör att vi själva kan hantera saknad cookie
             @CookieValue(name = "access_token", required = false)
             String accessToken) {
 
-
-        // kontrollerar att användaren har en JWT-token i cookien.
-        ResponseEntity<String> unauthorized =
-                unauthorizedIfMissing(accessToken);
-
-        // avbryter anropet om cookien saknas.
-        if (unauthorized != null) {
-            return unauthorized;
-        }
-
-        // gör om cookiens token till en Bearer-token
+        // cookien är valfri, produktdetaljer är publika
+        // getAuthorizationFromCookie returnerar null om cookien saknas
         String authorization = getAuthorizationFromCookie(accessToken);
 
-
-        // skickar vidare produktens ID och token till Product Service
         return proxyService.getProductById(id, authorization);
     }
-
+    
 
     /**
      * Skapar en produkt i Product Service. Kräver inloggning.

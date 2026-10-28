@@ -57,7 +57,7 @@ Alla sökvägar börjar med `/gateway`.
 - `POST /auth/logout` – loggar ut och tar bort cookien
 - `POST /users/register` – registrerar en ny användare
 - `GET /products` – hämtar alla produkter (öppen)
-- `GET /products/{id}` – hämtar en produkt (kräver inloggning)
+- `GET /products/{id}` – hämtar en produkt (öppen)
 - `POST /products` – skapar en produkt (kräver inloggning)
 - `DELETE /products/{id}` – tar bort en produkt (kräver inloggning)
 - `POST /orders` – skapar en order (kräver inloggning)
