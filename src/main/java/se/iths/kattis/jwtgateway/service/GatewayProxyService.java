@@ -41,8 +41,6 @@ public class GatewayProxyService {
 
     /**
      * * Skapar tjänsten med adresserna till mikrotjänsterna och cookie-inställningarna.
-     * *
-     *
      * @param authServerUrl     adress till Auth Server
      * @param productServiceUrl adress till Product Service
      * @param orderServiceUrl   adress till Order Service
