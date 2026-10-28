@@ -2,8 +2,10 @@ package se.iths.kattis.jwtgateway.dto;
 
 import java.util.List;
 
-// representerar svaret som gatewayen skickar tillbaka till frontend
-// token utelämnas eftersom den i stället ska skickas i en HttpOnly-cookie
+/**
+ * Svaret till frontend efter inloggning: giltighetstid i sekunder, användarnamn (subject)
+ * och roller. Själva JWT skickas aldrig här, utan bara i HttpOnly-cookien.
+ */
 public record LoginResponse(
         long expiresIn,
         String subject,

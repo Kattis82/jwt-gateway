@@ -7,10 +7,17 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-// Konfigurerar dokumentationen för gatewayens API.
+/**
+ * Konfigurerar dokumentationen (Swagger) för Gatewayens API.
+ */
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * Skapar API-dokumentationen med titel och version, och definierar JWT som Bearer-token.
+     *
+     * @return OpenAPI-konfigurationen
+     */
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()

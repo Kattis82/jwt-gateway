@@ -3,8 +3,11 @@ package se.iths.kattis.jwtgateway.dto;
 
 import java.util.List;
 
-// representerar hela svaret från Auth Server vid lyckad inloggning
-// JWT-token finns med här eftersom gatewayen behöver den för att skapa cookien
+/**
+ * Svaret från Auth Server vid lyckad inloggning. Innehåller JWT (accessToken),
+ * giltighetstid i sekunder (expiresIn), användarnamn (subject) och roller.
+ * Gateway läser token härifrån och sparar den i en HttpOnly-cookie.
+ */
 public record AuthServerResponse(
         String accessToken,
         long expiresIn,
